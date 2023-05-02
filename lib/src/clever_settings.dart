@@ -152,10 +152,7 @@ class SerializableSettingsValue<T> extends SettingsValue<T> {
   /// Method that describes how to serializes the value into Json.
   final Map<String, dynamic> Function(T value) toJson;
 
-  @override
-  T? get value {
-    final data = _box.get(name);
-
+  T? _convertFromJson(dynamic data) {
     if (data == null) {
       return defaultValue;
     }
@@ -174,6 +171,13 @@ class SerializableSettingsValue<T> extends SettingsValue<T> {
   }
 
   @override
+  T? get value {
+    final data = _box.get(name);
+
+    return _convertFromJson(data);
+  }
+
+  @override
   set value(T? value) {
     _logger.logConfig('Setting $name changed to: $value');
 
@@ -182,5 +186,24 @@ class SerializableSettingsValue<T> extends SettingsValue<T> {
       return;
     }
     _box.put(name, jsonEncode(toJson(value)));
+  }
+
+  @override
+  Stream<T?> watch() {
+    final stream = _box.watch(key: name);
+
+    final transformer = StreamTransformer<BoxEvent, T?>.fromHandlers(
+      handleData: (data, sink) {
+        sink.add(_convertFromJson(data.value));
+      },
+      handleError: (error, stackTrace, sink) {
+        sink.addError(error);
+      },
+      handleDone: (sink) {
+        sink.close();
+      },
+    );
+
+    return stream.transform(transformer);
   }
 }

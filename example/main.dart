@@ -1,7 +1,10 @@
+// ignore_for_file: avoid_print, depend_on_referenced_packages
+
 import 'dart:io';
 
 import 'package:clever_settings/clever_settings.dart';
 import 'package:hive/hive.dart';
+import 'package:meta/meta.dart';
 
 class Settings {
   const Settings._();
@@ -15,7 +18,7 @@ class Settings {
     name: 'user',
     fromJson: User.fromJson,
     toJson: (value) => value.toJson(),
-    defaultValue: User(name: 'John Pork', age: 27),
+    defaultValue: const User(name: 'John Pork', age: 27),
   );
 }
 
@@ -34,12 +37,15 @@ void main(List<String> args) async {
   print('The user is ${Settings.user.value}');
 
   // This is also stored across restarts.
-  Settings.user.value = User(name: 'John Doe', age: 22);
+  Settings.user.value = const User(name: 'John Doe', age: 22);
 }
 
 /// A complex object that can be converted to json.
+///
+/// This should have equality when using the `.watch` method on a setting.
+@immutable
 class User {
-  User({
+  const User({
     required this.name,
     required this.age,
   });
@@ -60,4 +66,14 @@ class User {
       'age': age,
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is User && other.name == name && other.age == age;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ age.hashCode;
 }

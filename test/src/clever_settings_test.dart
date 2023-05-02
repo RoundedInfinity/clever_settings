@@ -1,4 +1,5 @@
-// ignore_for_file: prefer_const_constructors, cascade_invocations, inference_failure_on_function_invocation, unawaited_futures
+// ignore: lines_longer_than_80_chars
+// ignore_for_file: prefer_const_constructors, cascade_invocations, inference_failure_on_function_invocation, unawaited_futures, avoid_equals_and_hash_code_on_mutable_classes
 import 'dart:async';
 import 'dart:io';
 
@@ -96,11 +97,38 @@ void main() {
 
       expect(setting.value, isA<User>());
     });
+
+    test('watch a serializable setting ', () async {
+      final setting = SerializableSettingsValue<User>(
+        name: 'watched_user',
+        fromJson: User.fromJson,
+        toJson: (value) => value.toJson(),
+      );
+
+      final users = [
+        User(name: 'walter', age: 54),
+        User(name: 'jesse', age: 25),
+        User(name: 'GUS', age: 38),
+      ];
+
+      final stream = setting.watch();
+
+      expectLater(stream, emitsInOrder(users));
+
+      await Future<void>.delayed(Duration.zero);
+
+      setting.value = users[0];
+      await Future<void>.delayed(Duration.zero);
+      setting.value = users[1];
+      await Future<void>.delayed(Duration.zero);
+      setting.value = users[2];
+      Hive.box(kSettingsBox).close();
+    });
   });
 }
 
 class User {
-  User({
+  const User({
     required this.name,
     required this.age,
   });
@@ -121,4 +149,17 @@ class User {
       'age': age,
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is User && other.name == name && other.age == age;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ age.hashCode;
+
+  @override
+  String toString() => 'User(name: $name, age: $age)';
 }
