@@ -1,4 +1,4 @@
-// ignore_for_file: comment_references
+// ignore_for_file: comment_references, lines_longer_than_80_chars
 
 import 'dart:async';
 import 'dart:convert';
@@ -23,7 +23,7 @@ const kSettingsBox = 'clever_settings';
 /// - [SettingsValue] to store and retrieve settings.
 /// - [SerializableSettingsValue] to use complex object as your settings.
 class CleverSettings {
-  CleverSettings._();
+  CleverSettings._(); // coverage:ignore-line
 
   /// Loads the storage in which the settings are saved.
   ///
@@ -107,6 +107,17 @@ class SettingsValue<T> {
     _box.put(name, value);
   }
 
+  /// Resets the value of this [SettingsValue] to its default value.
+  ///
+  /// This sets the current value to the [defaultValue] specified
+  /// when the instance was created.
+  ///
+  /// If no [defaultValue] was specified, the value of the [SettingsValue]
+  /// will be set to null.
+  void reset() {
+    value = defaultValue;
+  }
+
   /// Watches this [SettingsValue] for changes.
   Stream<T?> watch() {
     final stream = _box.watch(key: name);
@@ -114,9 +125,6 @@ class SettingsValue<T> {
     final transformer = StreamTransformer<BoxEvent, T?>.fromHandlers(
       handleData: (data, sink) {
         sink.add(data.value as T?);
-      },
-      handleError: (error, stackTrace, sink) {
-        sink.addError(error);
       },
       handleDone: (sink) {
         sink.close();
@@ -196,14 +204,46 @@ class SerializableSettingsValue<T> extends SettingsValue<T> {
       handleData: (data, sink) {
         sink.add(_convertFromJson(data.value));
       },
-      handleError: (error, stackTrace, sink) {
-        sink.addError(error);
-      },
       handleDone: (sink) {
         sink.close();
       },
     );
 
     return stream.transform(transformer);
+  }
+}
+
+/// {@template default_settings_value}
+/// A settings value that provides a default value
+/// if no value is specified by the user.
+///
+///The value stored in this class is guaranteed to be non-null.
+///
+/// Example:
+/// ```
+/// final setting = SettingsValue<int>(name: 'setting', defaultValue: 34);
+/// final defaultSetting = DefaultSettingsValue<int>(name: 'default', defaultValue: 16);
+///
+/// // This value is of type int? even though it has a default value.
+/// final value = setting.value;
+///
+/// // This value is of type int and not nullable.
+/// final otherValue = defaultSetting.value;
+///
+/// ```
+/// {@endtemplate}
+class DefaultSettingsValue<T> extends SettingsValue<T> {
+  /// {@macro default_settings_value}
+  DefaultSettingsValue({required super.name, required T super.defaultValue});
+
+  @override
+  T get value => super.value!;
+
+  /// Set the value stored for [name].
+  ///
+  /// When value is `null`, the settings' value is set to [defaultValue].
+  @override
+  set value(T? value) {
+    super.value = value ?? defaultValue!;
   }
 }

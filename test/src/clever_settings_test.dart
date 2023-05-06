@@ -44,6 +44,17 @@ void main() {
       expect(setting.value, equals('hey'));
     });
 
+    test('resetting a default value', () {
+      final setting =
+          SettingsValue<String>(name: 'string_setting', defaultValue: 'hey');
+
+      setting.value = 'ho';
+
+      setting.reset();
+
+      expect(setting.value, equals('hey'));
+    });
+
     test('using same settings object value', () {
       final setting = SettingsValue<String>(name: 'some_value');
       final otherSetting = SettingsValue<String>(name: 'some_value');
@@ -51,6 +62,14 @@ void main() {
       setting.value = 'hello';
 
       expect(setting.value, equals(otherSetting.value));
+    });
+
+    test('reset settings working', () async {
+      final setting = SettingsValue<bool>(name: 'bool_setting');
+      setting.value = true;
+      await CleverSettings.resetSettings();
+
+      expect(setting.value, isNull);
     });
 
     test('watch a setting', () async {
@@ -98,6 +117,42 @@ void main() {
       expect(setting.value, isA<User>());
     });
 
+    test('serializable value with default value', () {
+      final user = User(name: 'peter', age: 99);
+      final setting = SerializableSettingsValue<User>(
+        name: 'user',
+        fromJson: User.fromJson,
+        toJson: (value) => value.toJson(),
+        defaultValue: user,
+      );
+
+      expect(setting.value, equals(user));
+    });
+
+    test('serializable value null when decoding error', () {
+      final setting = SerializableSettingsValue<User>(
+        name: 'user',
+        fromJson: BrokenUser.fromJson,
+        toJson: (value) => value.toJson(),
+      );
+
+      setting.value = BrokenUser(name: 'peter', age: 99);
+
+      expect(setting.value, isNull);
+    });
+
+    test('serializable value set to null', () {
+      final setting = SerializableSettingsValue<User>(
+        name: 'user',
+        fromJson: User.fromJson,
+        toJson: (value) => value.toJson(),
+      );
+
+      setting.value = null;
+
+      expect(setting.value, isNull);
+    });
+
     test('watch a serializable setting ', () async {
       final setting = SerializableSettingsValue<User>(
         name: 'watched_user',
@@ -125,6 +180,35 @@ void main() {
       Hive.box(kSettingsBox).close();
     });
   });
+
+  test('get DefaultSettingsValue not nullable', () {
+    final setting = DefaultSettingsValue<String>(
+      name: 'defaulted_settings',
+      defaultValue: 'hi',
+    );
+
+    expect(setting.value, isA<String>());
+  });
+
+  test('set DefaultSettingsValue not nullable', () {
+    final setting = DefaultSettingsValue<String>(
+      name: 'defaulted_settings',
+      defaultValue: 'hi',
+    );
+
+    setting.value = null;
+
+    expect(setting.value, equals('hi'));
+  });
+}
+
+class BrokenUser extends User {
+  BrokenUser({required super.name, required super.age});
+
+  // ignore: avoid_unused_constructor_parameters
+  factory BrokenUser.fromJson(Map<String, dynamic> map) {
+    throw Error();
+  }
 }
 
 class User {
